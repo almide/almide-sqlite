@@ -47,7 +47,7 @@ pub effect fn query_params(db: Db, sql: String, params: List[String]) -> List[Ma
 
 // ── Row helpers ──
 
-pub fn first(rows: List[Map[String, String]]) -> Option[Map[String, String]] =
+pub fn first_row(rows: List[Map[String, String]]) -> Option[Map[String, String]] =
   rows |> list.first
 
 pub fn column(rows: List[Map[String, String]], name: String) -> List[String] =
@@ -77,13 +77,13 @@ pub effect fn rollback(db: Db) -> Unit =
 
 // ── Transaction helper ──
 
-pub effect fn transaction(db: Db, f: () -> Unit) -> Unit = {
-  begin(db)!
-  match f() {
-    Ok(_) => commit(db)!,
+pub effect fn transaction(db: Db, f: (Db) -> Result[Unit, String]) -> Unit = {
+  exec(db, "BEGIN")
+  match f(db) {
+    Ok(_) => exec(db, "COMMIT"),
     Err(e) => {
-      rollback(db)!
-      error.raise(e)!
+      let _ = native_exec(db, "ROLLBACK")
+      Err(e)!
     },
   }
 }
