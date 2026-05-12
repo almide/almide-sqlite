@@ -106,32 +106,32 @@ pub effect fn table_exists(db: Db, name: String) -> Bool =
 
 // ── Native bindings (Rust target) ──
 
-@native("rust", "sqlite", "native_open")
+@extern(rust, "sqlite", "native_open")
 fn native_open(path: String) -> Result[Int, String] = _
 
-@native("rust", "sqlite", "native_close")
+@extern(rust, "sqlite", "native_close")
 fn native_close(db: Int) -> Result[Unit, String] = _
 
-@native("rust", "sqlite", "native_exec")
+@extern(rust, "sqlite", "native_exec")
 fn native_exec(db: Int, sql: String) -> Result[Unit, String] = _
 
-@native("rust", "sqlite", "native_exec_params")
+@extern(rust, "sqlite", "native_exec_params")
 fn native_exec_params(db: Int, sql: String, params: List[String]) -> Result[Unit, String] = _
 
-@native("rust", "sqlite", "native_query")
+@extern(rust, "sqlite", "native_query")
 fn native_query(db: Int, sql: String) -> Result[List[Map[String, String]], String] = _
 
-@native("rust", "sqlite", "native_query_params")
+@extern(rust, "sqlite", "native_query_params")
 fn native_query_params(db: Int, sql: String, params: List[String]) -> Result[List[Map[String, String]], String] = _
 
-@native("rust", "sqlite", "native_changes")
+@extern(rust, "sqlite", "native_changes")
 fn native_changes(db: Int) -> Result[Int, String] = _
 
-@native("rust", "sqlite", "native_last_insert_id")
+@extern(rust, "sqlite", "native_last_insert_id")
 fn native_last_insert_id(db: Int) -> Result[Int, String] = _
 
-@native("rust", "sqlite", "native_tables")
+@extern(rust, "sqlite", "native_tables")
 fn native_tables(db: Int) -> Result[List[String], String] = _
 
-@native("rust", "sqlite", "native_table_exists")
+@extern(rust, "sqlite", "native_table_exists")
 fn native_table_exists(db: Int, name: String) -> Result[Bool, String] = _
