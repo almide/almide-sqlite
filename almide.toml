@@ -1,0 +1,6 @@
+[package]
+name = "almide-sqlite"
+version = "0.1.0"
+
+[native-deps]
+rusqlite = { version = "0.32", features = ["bundled"] }

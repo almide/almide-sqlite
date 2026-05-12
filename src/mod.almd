@@ -1,0 +1,129 @@
+// almide-sqlite — SQLite3 database access for Almide.
+//
+// Usage:
+//   import almide_sqlite as db
+//
+//   effect fn main() -> Unit = {
+//     let conn = db.open(":memory:")!
+//     db.exec(conn, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")!
+//     db.exec_params(conn, "INSERT INTO users (name) VALUES (?)", ["Alice"])!
+//     let rows = db.query(conn, "SELECT * FROM users")! |> db.rows
+//     db.close(conn)!
+//   }
+//
+// Db is an opaque handle (Int). Rows are materialized as List[Map[String, String]].
+// All values are returned as strings — use int.parse / float.parse for conversion.
+
+// ── Types ──
+
+type Db = Int
+
+// ── Open / Close ──
+
+pub effect fn open(path: String) -> Db =
+  native_open(path)
+
+pub effect fn open_memory() -> Db =
+  native_open(":memory:")
+
+pub effect fn close(db: Db) -> Unit =
+  native_close(db)
+
+// ── Execute (no result set) ──
+
+pub effect fn exec(db: Db, sql: String) -> Unit =
+  native_exec(db, sql)
+
+pub effect fn exec_params(db: Db, sql: String, params: List[String]) -> Unit =
+  native_exec_params(db, sql, params)
+
+// ── Query ──
+
+pub effect fn query(db: Db, sql: String) -> List[Map[String, String]] =
+  native_query(db, sql)
+
+pub effect fn query_params(db: Db, sql: String, params: List[String]) -> List[Map[String, String]] =
+  native_query_params(db, sql, params)
+
+// ── Row helpers ──
+
+pub fn first(rows: List[Map[String, String]]) -> Option[Map[String, String]] =
+  rows |> list.first
+
+pub fn column(rows: List[Map[String, String]], name: String) -> List[String] =
+  rows |> list.filter_map((row) => map.get(row, name))
+
+pub fn pluck(row: Map[String, String], key: String) -> String =
+  map.get(row, key) ?? ""
+
+// ── Metadata ──
+
+pub effect fn changes(db: Db) -> Int =
+  native_changes(db)
+
+pub effect fn last_insert_id(db: Db) -> Int =
+  native_last_insert_id(db)
+
+// ── Transaction ──
+
+pub effect fn begin(db: Db) -> Unit =
+  native_exec(db, "BEGIN")
+
+pub effect fn commit(db: Db) -> Unit =
+  native_exec(db, "COMMIT")
+
+pub effect fn rollback(db: Db) -> Unit =
+  native_exec(db, "ROLLBACK")
+
+// ── Transaction helper ──
+
+pub effect fn transaction(db: Db, f: () -> Unit) -> Unit = {
+  begin(db)!
+  match f() {
+    Ok(_) => commit(db)!,
+    Err(e) => {
+      rollback(db)!
+      error.raise(e)!
+    },
+  }
+}
+
+// ── Table info ──
+
+pub effect fn tables(db: Db) -> List[String] =
+  native_tables(db)
+
+pub effect fn table_exists(db: Db, name: String) -> Bool =
+  native_table_exists(db, name)
+
+// ── Native bindings ──
+
+@external("native::sqlite")
+fn native_open(path: String) -> Result[Int, String] = _
+
+@external("native::sqlite")
+fn native_close(db: Int) -> Result[Unit, String] = _
+
+@external("native::sqlite")
+fn native_exec(db: Int, sql: String) -> Result[Unit, String] = _
+
+@external("native::sqlite")
+fn native_exec_params(db: Int, sql: String, params: List[String]) -> Result[Unit, String] = _
+
+@external("native::sqlite")
+fn native_query(db: Int, sql: String) -> Result[List[Map[String, String]], String] = _
+
+@external("native::sqlite")
+fn native_query_params(db: Int, sql: String, params: List[String]) -> Result[List[Map[String, String]], String] = _
+
+@external("native::sqlite")
+fn native_changes(db: Int) -> Result[Int, String] = _
+
+@external("native::sqlite")
+fn native_last_insert_id(db: Int) -> Result[Int, String] = _
+
+@external("native::sqlite")
+fn native_tables(db: Int) -> Result[List[String], String] = _
+
+@external("native::sqlite")
+fn native_table_exists(db: Int, name: String) -> Result[Bool, String] = _
