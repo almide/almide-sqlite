@@ -50,8 +50,16 @@ pub effect fn query_params(db: Db, sql: String, params: List[String]) -> List[Ma
 pub fn first_row(rows: List[Map[String, String]]) -> Option[Map[String, String]] =
   rows |> list.first
 
-pub fn column(rows: List[Map[String, String]], name: String) -> List[String] =
-  rows |> list.filter_map((row) => map.get(row, name))
+pub fn column(rows: List[Map[String, String]], col: String) -> List[String] = {
+  var result: List[String] = []
+  for row in rows {
+    match map.get(row, col) {
+      Some(v) => { result = result + [v] },
+      None    => {},
+    }
+  }
+  result
+}
 
 pub fn pluck(row: Map[String, String], key: String) -> String =
   map.get(row, key) ?? ""
@@ -96,34 +104,34 @@ pub effect fn tables(db: Db) -> List[String] =
 pub effect fn table_exists(db: Db, name: String) -> Bool =
   native_table_exists(db, name)
 
-// ── Native bindings ──
+// ── Native bindings (Rust target) ──
 
-@external("native::sqlite")
+@native("rust", "sqlite", "native_open")
 fn native_open(path: String) -> Result[Int, String] = _
 
-@external("native::sqlite")
+@native("rust", "sqlite", "native_close")
 fn native_close(db: Int) -> Result[Unit, String] = _
 
-@external("native::sqlite")
+@native("rust", "sqlite", "native_exec")
 fn native_exec(db: Int, sql: String) -> Result[Unit, String] = _
 
-@external("native::sqlite")
+@native("rust", "sqlite", "native_exec_params")
 fn native_exec_params(db: Int, sql: String, params: List[String]) -> Result[Unit, String] = _
 
-@external("native::sqlite")
+@native("rust", "sqlite", "native_query")
 fn native_query(db: Int, sql: String) -> Result[List[Map[String, String]], String] = _
 
-@external("native::sqlite")
+@native("rust", "sqlite", "native_query_params")
 fn native_query_params(db: Int, sql: String, params: List[String]) -> Result[List[Map[String, String]], String] = _
 
-@external("native::sqlite")
+@native("rust", "sqlite", "native_changes")
 fn native_changes(db: Int) -> Result[Int, String] = _
 
-@external("native::sqlite")
+@native("rust", "sqlite", "native_last_insert_id")
 fn native_last_insert_id(db: Int) -> Result[Int, String] = _
 
-@external("native::sqlite")
+@native("rust", "sqlite", "native_tables")
 fn native_tables(db: Int) -> Result[List[String], String] = _
 
-@external("native::sqlite")
+@native("rust", "sqlite", "native_table_exists")
 fn native_table_exists(db: Int, name: String) -> Result[Bool, String] = _
