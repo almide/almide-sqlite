@@ -7,6 +7,10 @@ use rusqlite::{params_from_iter, Connection};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+// The generated crate's Map representation (insertion-ordered Vec<(K,V)>).
+// Almide `Map[String, String]` crosses the FFI as this type, not std HashMap.
+use crate::AlmideMap;
+
 static REGISTRY: Mutex<Option<HandleRegistry>> = Mutex::new(None);
 
 struct HandleRegistry {
@@ -82,7 +86,7 @@ pub fn native_exec_params(handle: i64, sql: &str, params: &[String]) -> Result<(
 
 // ── Query ──
 
-pub fn native_query(handle: i64, sql: &str) -> Result<Vec<HashMap<String, String>>, String> {
+pub fn native_query(handle: i64, sql: &str) -> Result<Vec<AlmideMap<String, String>>, String> {
     query_impl(handle, sql, &[])
 }
 
@@ -90,7 +94,7 @@ pub fn native_query_params(
     handle: i64,
     sql: &str,
     params: &[String],
-) -> Result<Vec<HashMap<String, String>>, String> {
+) -> Result<Vec<AlmideMap<String, String>>, String> {
     query_impl(handle, sql, params)
 }
 
@@ -98,14 +102,14 @@ fn query_impl(
     handle: i64,
     sql: &str,
     params: &[String],
-) -> Result<Vec<HashMap<String, String>>, String> {
+) -> Result<Vec<AlmideMap<String, String>>, String> {
     with_conn(handle, |conn| {
         let mut stmt = conn.prepare(sql).map_err(|e| format!("sqlite prepare: {e}"))?;
         let col_names: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
 
         let rows = stmt
             .query_map(params_from_iter(params.iter()), |row| {
-                let mut map = HashMap::new();
+                let mut map = AlmideMap::new();
                 for (i, name) in col_names.iter().enumerate() {
                     let val: String = row
                         .get::<_, rusqlite::types::Value>(i)
@@ -141,7 +145,7 @@ pub fn native_tables(handle: i64) -> Result<Vec<String>, String> {
         "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
         &[],
     )?;
-    Ok(rows.into_iter().filter_map(|r| r.get("name").cloned()).collect())
+    Ok(rows.into_iter().filter_map(|r| r.get(&"name".to_string()).cloned()).collect())
 }
 
 pub fn native_table_exists(handle: i64, name: &str) -> Result<bool, String> {

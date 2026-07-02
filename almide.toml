@@ -1,5 +1,5 @@
 [package]
-name = "almide-sqlite"
+name = "almide_sqlite"
 version = "0.1.0"
 
 [native-deps]

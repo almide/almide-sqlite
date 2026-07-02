@@ -1,0 +1,122 @@
+// Executable vectors for almide-sqlite: every public API exercised against
+// an in-memory database. Native host package (rusqlite FFI) — like porta,
+// the wasm leg is the native fallback by design.
+
+import self as db
+import fs
+
+effect fn fresh() -> Int = {
+  let conn = db.open_memory()
+  db.exec(conn, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")
+  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Alice", "30"])
+  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Bob", "25"])
+  conn
+}
+
+test "open_memory + exec + query round-trip" {
+  let conn = fresh()!
+  let rows = db.query(conn, "SELECT name, age FROM users ORDER BY age")!
+  assert_eq(list.len(rows), 2)
+  let empty: Map[String, String] = map.new()
+  assert_eq(db.pluck(rows |> list.first ?? empty, "name"), "Bob")
+  db.close(conn)!
+}
+
+test "query_params binds positional params" {
+  let conn = fresh()!
+  let rows = db.query_params(conn, "SELECT age FROM users WHERE name = ?", ["Alice"])!
+  assert_eq(db.column(rows, "age"), ["30"])
+  db.close(conn)!
+}
+
+test "open on a file path persists across close" {
+  let path = "/tmp/almide_sqlite_test.db"
+  let _ = fs.remove(path)
+  let conn = db.open(path)!
+  db.exec(conn, "CREATE TABLE kv (k TEXT, v TEXT)")!
+  db.exec_params(conn, "INSERT INTO kv VALUES (?, ?)", ["lang", "almide"])!
+  db.close(conn)!
+  let conn2 = db.open(path)!
+  let rows = db.query(conn2, "SELECT v FROM kv WHERE k = 'lang'")!
+  assert_eq(db.column(rows, "v"), ["almide"])
+  db.close(conn2)!
+  let _ = fs.remove(path)
+}
+
+test "first_row / column / pluck helpers" {
+  let conn = fresh()!
+  let rows = db.query(conn, "SELECT name FROM users ORDER BY name")!
+  match db.first_row(rows) {
+    some(r) => assert_eq(db.pluck(r, "name"), "Alice"),
+    none => assert(false),
+  }
+  assert_eq(db.column(rows, "name"), ["Alice", "Bob"])
+  assert_eq(db.column(rows, "missing_col"), [])
+  let empty: Map[String, String] = map.new()
+  assert_eq(db.pluck(rows |> list.first ?? empty, "missing"), "")
+  assert_eq(db.first_row([]), none)
+  db.close(conn)!
+}
+
+test "changes and last_insert_id" {
+  let conn = fresh()!
+  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Carol", "40"])!
+  assert_eq(db.changes(conn)!, 1)
+  assert_eq(db.last_insert_id(conn)!, 3)
+  db.exec(conn, "UPDATE users SET age = age + 1")!
+  assert_eq(db.changes(conn)!, 3)
+  db.close(conn)!
+}
+
+test "begin / rollback discards, commit keeps" {
+  let conn = fresh()!
+  db.begin(conn)!
+  db.exec(conn, "DELETE FROM users")!
+  db.rollback(conn)!
+  assert_eq(list.len(db.query(conn, "SELECT * FROM users")!), 2)
+  db.begin(conn)!
+  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Dan", "50"])!
+  db.commit(conn)!
+  assert_eq(list.len(db.query(conn, "SELECT * FROM users")!), 3)
+  db.close(conn)!
+}
+
+test "transaction helper commits on ok" {
+  let conn = fresh()!
+  db.transaction(conn, (c) => {
+    let _ = db.exec_params(c, "INSERT INTO users (name, age) VALUES (?, ?)", ["Eve", "22"])
+    ok(())
+  })!
+  assert_eq(list.len(db.query(conn, "SELECT * FROM users")!), 3)
+  db.close(conn)!
+}
+
+test "tables and table_exists" {
+  let conn = fresh()!
+  db.exec(conn, "CREATE TABLE posts (id INTEGER PRIMARY KEY)")!
+  assert_eq(db.tables(conn)!, ["posts", "users"])
+  assert(db.table_exists(conn, "users")!)
+  assert(not db.table_exists(conn, "ghosts")!)
+  db.close(conn)!
+}
+
+test "NULL and REAL values materialize as strings" {
+  let conn = db.open_memory()!
+  db.exec(conn, "CREATE TABLE t (a REAL, b TEXT)")!
+  db.exec(conn, "INSERT INTO t VALUES (1.5, NULL)")!
+  let rows = db.query(conn, "SELECT a, b FROM t")!
+  let empty: Map[String, String] = map.new()
+  let row = rows |> list.first ?? empty
+  assert_eq(db.pluck(row, "a"), "1.5")
+  assert_eq(db.pluck(row, "b"), "")
+  db.close(conn)!
+}
+
+test "bad SQL surfaces as err" {
+  let conn = db.open_memory()!
+  match db.exec(conn, "NOT VALID SQL") {
+    ok(_) => assert(false),
+    err(e) => assert(string.contains(e, "sqlite")),
+  }
+  db.close(conn)!
+}
