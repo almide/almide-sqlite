@@ -86,7 +86,7 @@ pub effect fn rollback(db: Db) -> Unit =
 // ── Transaction helper ──
 
 pub effect fn transaction(db: Db, f: (Db) -> Result[Unit, String]) -> Unit = {
-  exec(db, "BEGIN")
+  exec(db, "BEGIN")!
   match f(db) {
     Ok(_) => exec(db, "COMMIT"),
     Err(e) => {

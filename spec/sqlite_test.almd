@@ -6,10 +6,10 @@ import self as db
 import fs
 
 effect fn fresh() -> Int = {
-  let conn = db.open_memory()
-  db.exec(conn, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")
-  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Alice", "30"])
-  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Bob", "25"])
+  let conn = db.open_memory()!
+  db.exec(conn, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")!
+  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Alice", "30"])!
+  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Bob", "25"])!
   conn
 }
 

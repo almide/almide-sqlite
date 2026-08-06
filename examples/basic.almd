@@ -1,32 +1,32 @@
 import self as db
 
 effect fn main() -> Unit = {
-  let conn = db.open(":memory:")
+  let conn = db.open(":memory:")!
 
-  db.exec(conn, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")
-  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Alice", "30"])
-  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Bob", "25"])
-  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Charlie", "35"])
+  db.exec(conn, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")!
+  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Alice", "30"])!
+  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Bob", "25"])!
+  db.exec_params(conn, "INSERT INTO users (name, age) VALUES (?, ?)", ["Charlie", "35"])!
 
-  let rows = db.query(conn, "SELECT * FROM users ORDER BY age")
+  let rows = db.query(conn, "SELECT * FROM users ORDER BY age")!
   for row in rows {
     let name = db.pluck(row, "name")
     let age = db.pluck(row, "age")
     println("${name} is ${age} years old")
   }
 
-  let name_rows = db.query(conn, "SELECT name FROM users")
+  let name_rows = db.query(conn, "SELECT name FROM users")!
   let names = name_rows |> list.filter_map((row) => map.get(row, "name"))
   println("All names: ${string.join(names, ", ")}")
 
-  let table_list = db.tables(conn)
+  let table_list = db.tables(conn)!
   println("Tables: ${string.join(table_list, ", ")}")
 
-  let has_users = db.table_exists(conn, "users")
-  let has_posts = db.table_exists(conn, "posts")
+  let has_users = db.table_exists(conn, "users")!
+  let has_posts = db.table_exists(conn, "posts")!
   println("users exists: ${if has_users then "yes" else "no"}")
   println("posts exists: ${if has_posts then "yes" else "no"}")
 
-  db.close(conn)
+  db.close(conn)!
   println("Done!")
 }
