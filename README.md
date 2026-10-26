@@ -26,7 +26,7 @@ effect fn main() -> Unit = {
   }
 
   let names = db.query(conn, "SELECT name FROM users")! |> db.column("name")
-  println("All names: ${string.join(names, ", ")}")
+  println("All names: ${list.join(names, ", ")}")
 
   db.close(conn)!
 }
