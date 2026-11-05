@@ -17,10 +17,10 @@ effect fn main() -> Unit = {
 
   let name_rows = db.query(conn, "SELECT name FROM users")!
   let names = name_rows |> list.filter_map((row) => map.get(row, "name"))
-  println("All names: ${string.join(names, ", ")}")
+  println("All names: ${list.join(names, ", ")}")
 
   let table_list = db.tables(conn)!
-  println("Tables: ${string.join(table_list, ", ")}")
+  println("Tables: ${list.join(table_list, ", ")}")
 
   let has_users = db.table_exists(conn, "users")!
   let has_posts = db.table_exists(conn, "posts")!

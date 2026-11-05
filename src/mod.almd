@@ -21,29 +21,29 @@ type Db = Int
 // ── Open / Close ──
 
 pub effect fn open(path: String) -> Db =
-  native_open(path)
+  native_open(path)!
 
 pub effect fn open_memory() -> Db =
-  native_open(":memory:")
+  native_open(":memory:")!
 
 pub effect fn close(db: Db) -> Unit =
-  native_close(db)
+  native_close(db)!
 
 // ── Execute (no result set) ──
 
 pub effect fn exec(db: Db, sql: String) -> Unit =
-  native_exec(db, sql)
+  native_exec(db, sql)!
 
 pub effect fn exec_params(db: Db, sql: String, params: List[String]) -> Unit =
-  native_exec_params(db, sql, params)
+  native_exec_params(db, sql, params)!
 
 // ── Query ──
 
 pub effect fn query(db: Db, sql: String) -> List[Map[String, String]] =
-  native_query(db, sql)
+  native_query(db, sql)!
 
 pub effect fn query_params(db: Db, sql: String, params: List[String]) -> List[Map[String, String]] =
-  native_query_params(db, sql, params)
+  native_query_params(db, sql, params)!
 
 // ── Row helpers ──
 
@@ -67,28 +67,28 @@ pub fn pluck(row: Map[String, String], key: String) -> String =
 // ── Metadata ──
 
 pub effect fn changes(db: Db) -> Int =
-  native_changes(db)
+  native_changes(db)!
 
 pub effect fn last_insert_id(db: Db) -> Int =
-  native_last_insert_id(db)
+  native_last_insert_id(db)!
 
 // ── Transaction ──
 
 pub effect fn begin(db: Db) -> Unit =
-  native_exec(db, "BEGIN")
+  native_exec(db, "BEGIN")!
 
 pub effect fn commit(db: Db) -> Unit =
-  native_exec(db, "COMMIT")
+  native_exec(db, "COMMIT")!
 
 pub effect fn rollback(db: Db) -> Unit =
-  native_exec(db, "ROLLBACK")
+  native_exec(db, "ROLLBACK")!
 
 // ── Transaction helper ──
 
 pub effect fn transaction(db: Db, f: (Db) -> Result[Unit, String]) -> Unit = {
   exec(db, "BEGIN")!
   match f(db) {
-    Ok(_) => exec(db, "COMMIT"),
+    Ok(_) => exec(db, "COMMIT")!,
     Err(e) => {
       let _ = native_exec(db, "ROLLBACK")
       Err(e)!
@@ -99,10 +99,10 @@ pub effect fn transaction(db: Db, f: (Db) -> Result[Unit, String]) -> Unit = {
 // ── Table info ──
 
 pub effect fn tables(db: Db) -> List[String] =
-  native_tables(db)
+  native_tables(db)!
 
 pub effect fn table_exists(db: Db, name: String) -> Bool =
-  native_table_exists(db, name)
+  native_table_exists(db, name)!
 
 // ── Native bindings (Rust target) ──
 
