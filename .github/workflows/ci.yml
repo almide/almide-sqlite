@@ -1,0 +1,16 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request: { branches: [main] }
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Almide
+        run: |
+          curl -fsSL "https://github.com/almide/almide/releases/download/v0.69.0/almide-linux-x86_64.tar.gz" -o almide.tar.gz
+          tar xzf almide.tar.gz --strip-components=1 && sudo mv almide /usr/local/bin/ && almide --version
+      - run: almide check
+      - run: almide test
